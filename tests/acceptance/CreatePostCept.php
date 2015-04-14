@@ -13,3 +13,7 @@ $I->click('button[type=submit]');
 
 $I->seeCurrentUrlEquals('/');
 $I->see($message);
+$I->seeInDatabase('post', [
+    'nickname' => $nickname,
+    'message'  => $message,
+]);

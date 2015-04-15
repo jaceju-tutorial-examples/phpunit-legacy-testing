@@ -9,7 +9,6 @@ modules:
     enabled:
         - PhpBrowser
         - AcceptanceHelper
-        - Db
     config:
         PhpBrowser:
             url: 'http://localhost:9999/'

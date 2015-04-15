@@ -1,18 +1,18 @@
 <?php
-use \AcceptanceTester;
+use \FunctionalTester;
 
 class GbookCest
 {
-    public function _before(AcceptanceTester $I)
+    public function _before(FunctionalTester $I)
     {
     }
 
-    public function _after(AcceptanceTester $I)
+    public function _after(FunctionalTester $I)
     {
     }
 
     // tests
-    public function tryToCreatePost(AcceptanceTester $I)
+    public function tryToCreatePost(FunctionalTester $I)
     {
         $I->wantTo('create post');
         $I->amOnPage('/');
@@ -33,7 +33,7 @@ class GbookCest
         ]);
     }
 
-    public function tryToCreateInvalidPost(AcceptanceTester $I)
+    public function tryToCreateInvalidPost(FunctionalTester $I)
     {
         $I->wantTo('create an invalid post');
         $I->amOnPage('/');

@@ -1,5 +1,5 @@
 <?php
-$I = new AcceptanceTester($scenario);
+$I = new FunctionalTester($scenario);
 $I->wantTo('create post');
 $I->amOnPage('/');
 

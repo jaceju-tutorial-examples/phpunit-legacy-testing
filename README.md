@@ -5,7 +5,29 @@
  1. 邏輯混雜
  2. 必須依賴伺服器環境
 
-## 測試種類
+## Legacy 專案功能嗅探
+
+有時候 Legacy 專案沒有功能規格說明，必須直接從瀏覽器確認。
+
+所以先在背景啟動測試用的 Web 伺服器：
+
+```bash
+php -S localhost:9999 -t . &
+```
+
+實際操作留言板後，我們得知使用者可以：
+
+1. 建立一個留言
+2. 留言未正確填寫時會有錯誤訊息
+
+查看 `index.php` 後，也可以得到以下資訊：
+
+* 單一 php 檔案，混雜 PHP 程式碼和 HTML
+* 使用 PDO 操作 MySQL 資料庫
+
+## Codeception 介紹
+
+Codeception 支援了以下數種測行模型：
 
 * 驗收測試
 * 功能測試
@@ -25,27 +47,33 @@
 
 單元測試是用來測試一些可被獨立測試的方法或函式，它們通常功能單純，不需要跟其他功能聯合起來透過某些一連串的特定行為來產生有用的結果。因為它們有著需要獨立測試的特性，所以適合用來測試框架核心或是函式庫。然而單元與單元之間不能有關連性，因此也無法得知彼此之間是否有所影響，必須依賴良好的介面設計。
 
-## Legacy 專案說明
+### 為什麼用 Codeception
 
-* 主要功能為留言板
-* 輸入暱稱和留言訊息後就可以留言
-* 沒有輸入內容的話會提示錯誤訊息
-* 單一 php 檔案，混雜 PHP 程式碼和 HTML
-* 使用 PDO 操作資料庫
+Codeception 可以在某種程度上解決 legacy code 測試上的困難，我們可以在測試機上執行 legacy code ，然後以 Codeception 以模擬瀏覽器的方式來存取輸出結果並測試功能流程。
+
+```
+Legacy Code <-> Testing Web Server <-> PhpBrowser <-> Codeception
+```
+
+接下來我們會用 Codeception 驗證舊專案的功能流程以及內部細節。
+
+因為是功能測試，所以相關操作都會是與 `functional` 這個字有關的設定或指令。
 
 ## 初始化專案
 
-* Codeception 可以在某種程度上解決 legacy code 的功能測試或驗收測試
+在專案根目錄執行以下指令：
 
 ```bash
 composer require "codeception/codeception:~2.0.12"
 ```
 
+建立指令別名方便測試：
+
 ```bash
 alias c=./vendor/bin/codecept
 ```
 
-* 方便後續指令操作
+在專案中初始化 Codeception ：
 
 ```bash
 c bootstrap
@@ -53,9 +81,9 @@ c bootstrap
 
 * `bootstrap` 會建立 `tests` 資料夾及必要的測試設定檔與類別檔
 
-啟用 [`PhpBrowser`](http://codeception.com/docs/modules/PhpBrowser) 模組
+啟用 [`PhpBrowser`](http://codeception.com/docs/modules/PhpBrowser) 模組，讓 Codeception 可以接上測試用的伺服器。
 
-編輯 `tests/functional.suite.yml`
+編輯 `tests/functional.suite.yml` ：
 
 ```yaml
 class_name: FunctionalTester
@@ -67,37 +95,29 @@ modules:
 ```
 
 * PhpBrowser 模組可以模擬一個瀏覽器，連線到指定的伺服器，並用程式介面來操作
+* `config` 中可以定義每個模組需要的設定值
+
+當引用模組後，需要用 `build` 指令重新產生 `FunctionalTester` 類別：
 
 ```bash
 c build
 ```
 
-* 每次新增模組後都要重新 `build`
-
-```bash
-php -S localhost:9999 -t . &
-```
-
-* 需要啟動測試用的伺服器，也可以是外部網址
-
-## 確認功能
-
-* 如果沒有功能說明，就必須直接從瀏覽器確認
-* 使用者可以：
- 1. 建立一個留言
- 2. 留言未正確填寫時會有錯誤訊息
-
 ## 功能一：建立一個留言
+
+Codeception 可以協助我們自動產生測試用的規格檔，有 `Cept` 與 `Cest` 兩種類型。
+
+先從 `Cept` 類型的測試開始，執行指令：
 
 ```bash
 c generate:cept functional CreatePost
 ```
 
-```bash
-c run functional
-```
+這樣會在 `tests/functional` 目錄下建立一個 `CreatePostCept.php` 檔案。
 
-編輯 `tests/functional/CreatePostCept.php`
+然後要在 `CreatePostCept.php` 撰寫功能流程。
+
+編輯 `tests/functional/CreatePostCept.php` ：
 
 ```php
 $I = new FunctionalTester($scenario);
@@ -123,23 +143,39 @@ $I->see($message);
 * `see` ：在目前的畫面會看到什麼文字
 * 其他方法可參考： [PhpBrowser](http://codeception.com/docs/modules/PhpBrowser)
 
+最後以 `run` 指令來執行測試，後面可以指定要執行的測試模式：
+
 ```bash
 c run functional
 ```
 
-* 到這邊其實算驗收測試，因為我們不知道伺服器端發生什麼變化
-* 一般會驗證資料庫中的內容來確認動作有正確被執行
+當通過測試後，程式碼就有了基本的保障。接下來如果要改版或重構，就可以用這個測試去擴充或驗證。
 
 ## 加入資料庫支援
 
-* 建立一個可以被完整重建的測試資料庫
-* 可以透過 dump 線上資料庫來做測試
+到這邊其實算驗收測試，因為我們不知道伺服器端發生什麼變化，一般會驗證資料庫中的內容來確認動作有正確被執行。
+
+但因為 Legacy Code 是由測試伺服器執行，而非在 Codeception 的 process 中，所以無法直接得知資料庫中的狀況，因此要靠 `Db` 模組來連接測試用的資料庫。
+
+```
+Legacy Code <-> Testing Database Server <-> Db <-> Codeception
+```
+
+### 測試用資料庫
+
+在測試時，我們希望測試資料庫是可以被重複使用的。因為 Legacy code 是使用 MySQL ，因此可以透過 dump 線上資料庫來做測試。
+
+執行：
 
 ```
 mysqldump -uroot -p --add-drop-database --databases --skip-comments gbook > tests/_data/dump.sql
 ```
 
-編輯 `codeception.yml`
+就能把目前的資料庫的 schema 輸出到 `tests/_data/dump.sql` 。
+
+接著要在 Global 設定檔中設定好 `Db` 模組。
+
+編輯 `codeception.yml` ：
 
 ```yaml
 modules:
@@ -157,9 +193,9 @@ modules:
 * `cleanup` ：每次測試後要還原資料庫 (匯入 dump 檔)
 * 視狀況決定要用 `populate` 還是 `cleanup` ；如果是測試用資料庫就無所謂，可以兩個都設為 `true`
 
-啟用 [`Db`](http://codeception.com/docs/modules/Db) 模組
+並且啟用 [`Db`](http://codeception.com/docs/modules/Db) 模組。
 
-編輯 `tests/functional.suite.yml`
+編輯 `tests/functional.suite.yml` ：
 
 ```yaml
 class_name: FunctionalTester
@@ -171,7 +207,7 @@ modules:
 c build
 ```
 
-編輯 `tests/functional/CreatePostCept.php`
+編輯 `tests/functional/CreatePostCept.php` ：
 
 ```php
 // ...
@@ -197,7 +233,7 @@ c run functional
 c generate:cest functional Gbook
 ```
 
-編輯 `tests/functional/GbookCest.php`
+編輯 `tests/functional/GbookCest.php` ：
 
 ```php
 use \FunctionalTester;
@@ -245,7 +281,7 @@ c run functional GbookCest
 
 ## 功能二：留言未正確填寫時會有錯誤訊息
 
-編輯 `tests/functional/GbookCest.php`
+編輯 `tests/functional/GbookCest.php` ：
 
 ```php
     public function tryToCreateInvalidPost(FunctionalTester $I)

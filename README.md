@@ -23,7 +23,7 @@ php -S localhost:9999 -t . &
 查看 `index.php` 後，也可以得到以下資訊：
 
 * 單一 php 檔案，混雜 PHP 程式碼和 HTML
-* 使用 PDO 操作 MySQL 資料庫
+* 使用 PDO 操作 sqlite 資料庫
 
 ## Codeception 介紹
 
@@ -163,15 +163,23 @@ Legacy Code <-> Testing Database Server <-> Db <-> Codeception
 
 ### 測試用資料庫
 
-在測試時，我們希望測試資料庫是可以被重複使用的。因為 Legacy code 是使用 MySQL ，因此可以透過 dump 線上資料庫來做測試。
+在測試時，我們希望測試資料庫是可以被重複使用的。因為 Legacy code 是使用 sqlite ，因此可以透過 dump 線上資料庫來做測試。
 
 執行：
 
 ```
-mysqldump -uroot -p --add-drop-database --databases --skip-comments gbook > tests/_data/dump.sql
+sqlite3 db.sqlite
 ```
 
-就能把目前的資料庫的 schema 輸出到 `tests/_data/dump.sql` 。
+進入 sqlite 的操作面後，輸入：
+
+```
+sqlite> .output dump.sql
+sqlite> .dump post
+sqlite> .exit
+```
+
+就能把目前的資料庫的 schema 輸出到 `dump.sql` 。
 
 接著要在 Global 設定檔中設定好 `Db` 模組。
 
@@ -184,7 +192,7 @@ modules:
             dsn: 'mysql:host=localhost;dbname=gbook'
             user: 'gbook'
             password: 'secret'
-            dump: tests/_data/dump.sql
+            dump: dump.sql
             populate: true # should the dump be loaded before test suite is started.
             cleanup: true # should the dump be reloaded after each test
 ```
@@ -203,9 +211,13 @@ modules:
     enabled: [Filesystem, FunctionalHelper, PhpBrowser, Db]
 ```
 
+要記得重新產生 `FunctionalTester` ：
+
 ```
 c build
 ```
+
+然後利用 `Db` 模組的 `seeInDatabase` 來確認是否有真的寫入資料庫。
 
 編輯 `tests/functional/CreatePostCept.php` ：
 
@@ -225,13 +237,18 @@ c run functional
 
 ## 建立 Cest 類型的測試
 
-* 類別式的測試
+Cest 是類別寫法的測試，每個函式都是一個測試，通常是需要以下狀況時使用：
+
 * 需要有前後置作業 (`_before` / `_after`)
 * 需要有共用的 fixtrues
+
+在 `generate` 時改用 `cest` ：
 
 ```bash
 c generate:cest functional Gbook
 ```
+
+Cest 測試的寫法和 Cept 是差不多的，通常直接把 `*Cept.php` 的內容 (不含 `$I = new FunctionalTester($scenario);`) 複製到 `*Cest` 類別的方法裡就可以了。
 
 編輯 `tests/functional/GbookCest.php` ：
 
@@ -272,14 +289,17 @@ class GbookCest
 ```
 
 * 將 `tests/functional/CreatePostCept.php` 的內容複製到 `tryToCreatePost` 方法中
+* 可以刪除 `tests/functional/CreatePostCept.php`
+
+只執行 `GbookCest` 類別裡的測試：
 
 ```bash
 c run functional GbookCest
 ```
 
-* 可以刪除 `tests/functional/CreatePostCept.php`
-
 ## 功能二：留言未正確填寫時會有錯誤訊息
+
+在沒有對欄位輸入任何值即送出表單的話，應該會有錯誤訊息產生。
 
 編輯 `tests/functional/GbookCest.php` ：
 
@@ -296,5 +316,5 @@ c run functional GbookCest
     }
 ```
 
-* 一般會直接從瀏覽器畫面來得知有什麼結果
-* 有時需要從程式碼觀察功能可能會出現的資訊
+* 一般會直接從瀏覽器畫面來得知錯誤訊息
+* 有時需要從程式碼得知錯誤訊息

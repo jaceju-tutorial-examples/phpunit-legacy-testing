@@ -11,9 +11,7 @@ settings:
 modules:
     config:
         Db:
-            dsn: 'mysql:host=localhost;dbname=gbook'
-            user: 'gbook'
-            password: 'secret'
-            dump: tests/_data/dump.sql
-            populate: true # should the dump be loaded before test suite is started.
-            cleanup: true # should the dump be reloaded after each test
+            dsn: 'sqlite:db.sqlite'
+            user: ''
+            password: ''
+            dump: dump.sql

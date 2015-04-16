@@ -1,9 +1,9 @@
 <?php
 
 session_start();
-define('DB_DSN', 'mysql:host=localhost;dbname=gbook');
-define('DB_USER', 'gbook');
-define('DB_PASS', 'secret');
+define('DB_DSN', 'sqlite:./db.sqlite');
+define('DB_USER', null);
+define('DB_PASS', null);
 
 try {
     $dbh = new PDO(DB_DSN, DB_USER, DB_PASS);
